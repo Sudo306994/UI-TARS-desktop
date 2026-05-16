@@ -224,8 +224,20 @@ export class NativeToolCallEngine extends ToolCallEngine {
 
     // For OpenAI, directly use the tool_calls field
     if (toolCalls && toolCalls.length > 0) {
-      message.tool_calls = toolCalls;
-      this.logger.debug(`Adding ${toolCalls.length} tool calls to assistant message`);
+      // Normalize tool-call arguments: some upstream OpenAI->Anthropic translators
+      // (e.g. OmniRoute) JSON.parse(arguments) into Anthropic's tool_use.input,
+      // and fail when arguments is an empty string (zero-arg tool calls).
+      // Always send "{}" instead of "" so the round-trip yields {} (valid object).
+      const normalized = toolCalls.map((tc) => {
+        if (!tc.function) return tc;
+        const args = tc.function.arguments;
+        if (typeof args === 'string' && args.trim() === '') {
+          return { ...tc, function: { ...tc.function, arguments: '{}' } };
+        }
+        return tc;
+      });
+      message.tool_calls = normalized;
+      this.logger.debug(`Adding ${normalized.length} tool calls to assistant message`);
     }
 
     return message;
