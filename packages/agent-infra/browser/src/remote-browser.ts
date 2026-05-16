@@ -58,11 +58,31 @@ export class RemoteBrowser extends BaseBrowser {
     let browserWSEndpoint = this.options?.wsEndpoint;
 
     if (!browserWSEndpoint) {
-      const cdpEndpoint =
-        this.options?.cdpEndpoint || `http://127.0.0.1:9222/json/version`;
+      // Accept either a bare CDP base (http://host:9222) or a full discovery
+      // URL (http://host:9222/json/version). Normalise to the discovery URL.
+      const raw = this.options?.cdpEndpoint || 'http://127.0.0.1:9222';
+      const cdpEndpoint = /\/json(\/version)?\/?$/.test(raw)
+        ? raw
+        : `${raw.replace(/\/$/, '')}/json/version`;
       const response = await fetch(cdpEndpoint);
-      const { webSocketDebuggerUrl } = await response.json();
-      browserWSEndpoint = webSocketDebuggerUrl;
+      if (!response.ok) {
+        throw new Error(
+          `CDP discovery request failed (${response.status} ${response.statusText}) at ${cdpEndpoint}`,
+        );
+      }
+      const body = await response.text();
+      let discovery: { webSocketDebuggerUrl?: string };
+      try {
+        discovery = JSON.parse(body);
+      } catch (parseErr) {
+        throw new Error(
+          `CDP discovery response was not JSON (got ${body.length} bytes) at ${cdpEndpoint}: ${(parseErr as Error).message}`,
+        );
+      }
+      if (!discovery.webSocketDebuggerUrl) {
+        throw new Error(`CDP discovery missing webSocketDebuggerUrl at ${cdpEndpoint}`);
+      }
+      browserWSEndpoint = discovery.webSocketDebuggerUrl;
     }
 
     this.logger.info('Using WebSocket endpoint:', browserWSEndpoint);
@@ -84,5 +104,23 @@ export class RemoteBrowser extends BaseBrowser {
 
   async setupPageListener() {
     super.setupPageListener();
+  }
+
+  /**
+   * Disconnect from the upstream browser instead of closing it.
+   * The remote browser is owned by something else (CDP server) — calling
+   * browser.close() on an attached puppeteer connection terminates the
+   * upstream chromium process, which is destructive for our use case.
+   */
+  async close(): Promise<void> {
+    this.logger.info('Disconnecting from remote browser (leaving upstream alive)');
+    try {
+      await this.browser?.disconnect();
+      this.browser = null;
+      this.logger.success('Disconnected from remote browser');
+    } catch (error) {
+      this.logger.error('Failed to disconnect from remote browser:', error);
+      throw error;
+    }
   }
 }

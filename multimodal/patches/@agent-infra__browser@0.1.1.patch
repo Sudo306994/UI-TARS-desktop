@@ -1,0 +1,56 @@
+diff --git a/dist/remote-browser.js b/dist/remote-browser.js
+index 41300f1fb4ed37d4e141f0e649fd5f7e830a6a2e..43a0463247dbe065a14d6bcb2991041f8d523553 100644
+--- a/dist/remote-browser.js
++++ b/dist/remote-browser.js
+@@ -49,10 +49,20 @@ class RemoteBrowser extends external_base_browser_js_namespaceObject.BaseBrowser
+         let browserWSEndpoint = null === (_this_options = this.options) || void 0 === _this_options ? void 0 : _this_options.wsEndpoint;
+         if (!browserWSEndpoint) {
+             var _this_options1;
+-            const cdpEndpoint = (null === (_this_options1 = this.options) || void 0 === _this_options1 ? void 0 : _this_options1.cdpEndpoint) || "http://127.0.0.1:9222/json/version";
++            const raw = (null === (_this_options1 = this.options) || void 0 === _this_options1 ? void 0 : _this_options1.cdpEndpoint) || "http://127.0.0.1:9222";
++            const cdpEndpoint = /\/json(\/version)?\/?$/.test(raw) ? raw : `${raw.replace(/\/$/, '')}/json/version`;
+             const response = await fetch(cdpEndpoint);
+-            const { webSocketDebuggerUrl } = await response.json();
+-            browserWSEndpoint = webSocketDebuggerUrl;
++            if (!response.ok) {
++                throw new Error(`CDP discovery failed (${response.status} ${response.statusText}) at ${cdpEndpoint}`);
++            }
++            const body = await response.text();
++            let discovery;
++            try { discovery = JSON.parse(body); }
++            catch (e) { throw new Error(`CDP discovery response was not JSON (got ${body.length} bytes) at ${cdpEndpoint}`); }
++            if (!discovery.webSocketDebuggerUrl) {
++                throw new Error(`CDP discovery missing webSocketDebuggerUrl at ${cdpEndpoint}`);
++            }
++            browserWSEndpoint = discovery.webSocketDebuggerUrl;
+         }
+         this.logger.info('Using WebSocket endpoint:', browserWSEndpoint);
+         const puppeteerConnectOptions = {
+diff --git a/dist/remote-browser.mjs b/dist/remote-browser.mjs
+index 8fcb5b30c5b9da8109c9bb4192f616f35f30a920..e55c4c27c791e9a1397bdc4687c838d3e4141f19 100644
+--- a/dist/remote-browser.mjs
++++ b/dist/remote-browser.mjs
+@@ -21,10 +21,20 @@ class RemoteBrowser extends __WEBPACK_EXTERNAL_MODULE__base_browser_mjs_64d751a3
+         let browserWSEndpoint = null === (_this_options = this.options) || void 0 === _this_options ? void 0 : _this_options.wsEndpoint;
+         if (!browserWSEndpoint) {
+             var _this_options1;
+-            const cdpEndpoint = (null === (_this_options1 = this.options) || void 0 === _this_options1 ? void 0 : _this_options1.cdpEndpoint) || "http://127.0.0.1:9222/json/version";
++            const raw = (null === (_this_options1 = this.options) || void 0 === _this_options1 ? void 0 : _this_options1.cdpEndpoint) || "http://127.0.0.1:9222";
++            const cdpEndpoint = /\/json(\/version)?\/?$/.test(raw) ? raw : `${raw.replace(/\/$/, '')}/json/version`;
+             const response = await fetch(cdpEndpoint);
+-            const { webSocketDebuggerUrl } = await response.json();
+-            browserWSEndpoint = webSocketDebuggerUrl;
++            if (!response.ok) {
++                throw new Error(`CDP discovery failed (${response.status} ${response.statusText}) at ${cdpEndpoint}`);
++            }
++            const body = await response.text();
++            let discovery;
++            try { discovery = JSON.parse(body); }
++            catch (e) { throw new Error(`CDP discovery response was not JSON (got ${body.length} bytes) at ${cdpEndpoint}`); }
++            if (!discovery.webSocketDebuggerUrl) {
++                throw new Error(`CDP discovery missing webSocketDebuggerUrl at ${cdpEndpoint}`);
++            }
++            browserWSEndpoint = discovery.webSocketDebuggerUrl;
+         }
+         this.logger.info('Using WebSocket endpoint:', browserWSEndpoint);
+         const puppeteerConnectOptions = {
