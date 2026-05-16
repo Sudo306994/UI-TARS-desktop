@@ -380,6 +380,25 @@ const handleToolCall = async (
         }
 
         try {
+          // Smooth visible cursor move before clicking — dispatches N
+          // intermediate mouseMoved events so the cursor is captured in
+          // recordings. Disable with MCP_BROWSER_SMOOTH_MOVE=0.
+          if (process.env.MCP_BROWSER_SMOOTH_MOVE !== '0' && element) {
+            try {
+              const box = await (element as ElementHandle<Element>).boundingBox();
+              if (box) {
+                const cx = box.x + box.width / 2;
+                const cy = box.y + box.height / 2;
+                const steps = parseInt(
+                  process.env.MCP_BROWSER_MOVE_STEPS || '24', 10,
+                );
+                await page.mouse.move(cx, cy, { steps });
+              }
+            } catch {
+              // best-effort — never block the click on a move failure
+            }
+          }
+
           await Promise.race([
             element?.click(),
             new Promise((_, reject) =>

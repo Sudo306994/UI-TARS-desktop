@@ -8,6 +8,9 @@ patchedDependencies:
   '@agent-infra/browser@0.1.1':
     hash: c4epf5bvwkwuoo4niv46enjazm
     path: patches/@agent-infra__browser@0.1.1.patch
+  '@agent-infra/mcp-server-browser@1.1.10':
+    hash: yn2pyqh77airxa4scu3vcycr5e
+    path: patches/@agent-infra__mcp-server-browser@1.1.10.patch
 
 importers:
 
@@ -89,7 +92,7 @@ importers:
         version: 0.0.5
       '@agent-infra/mcp-server-browser':
         specifier: 1.1.10
-        version: 1.1.10
+        version: 1.1.10(patch_hash=yn2pyqh77airxa4scu3vcycr5e)
       '@agent-infra/mcp-server-commands':
         specifier: 1.1.10
         version: 1.1.10
@@ -12654,7 +12657,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@agent-infra/mcp-server-browser@1.1.10':
+  '@agent-infra/mcp-server-browser@1.1.10(patch_hash=yn2pyqh77airxa4scu3vcycr5e)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.12.1
       '@ui-tars/action-parser': 1.2.3

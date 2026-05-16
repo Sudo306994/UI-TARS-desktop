@@ -27,6 +27,13 @@ This fork carries small patches needed for our setup. Each change is in its own 
 - Recent CSRF middleware (upstream commit #1853) returned 403 on the in-process POST that the headless `run` command makes to `/api/v1/oneshot/query`.
 - Added a leading GET to `/api/v1/csrf-token` and forwarded the value as `X-CSRF-Token`.
 
+### `fix(agent-infra/browser): unbreak RemoteBrowser CDP attach`
+- Files: `packages/agent-infra/browser/src/remote-browser.ts` (source) + `multimodal/patches/@agent-infra__browser@0.1.1.patch` (applied to installed npm package)
+- Two bugs made `RemoteBrowser` unusable when attaching to an external CDP endpoint:
+  1. URL handling: user-supplied `cdpEndpoint` (e.g. `http://127.0.0.1:9222`) was used as-is for the WebSocket discovery fetch, but the default included `/json/version`. Hitting the bare endpoint returned empty body, `JSON.parse('')` threw. Now normalises: appends `/json/version` if not already present.
+  2. Cleanup: `BaseBrowser.close()` called `browser.close()` (forceful chromium shutdown). For an attached browser we should `disconnect()` to leave the upstream alive. Override added.
+- The pnpm patch is applied automatically on every `pnpm install` via the `patchedDependencies` field in `multimodal/package.json`.
+
 ## Build (from `multimodal/`)
 ```
 npx -y pnpm@9 install

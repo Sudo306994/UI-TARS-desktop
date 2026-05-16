@@ -1,0 +1,22 @@
+diff --git a/dist/server.js b/dist/server.js
+index 64416ae32d34748705ba8fa5f7849ad65cda9d2b..4c3db0a5aeb99d765476b975f225865064b8b078 100644
+--- a/dist/server.js
++++ b/dist/server.js
+@@ -59324,6 +59324,17 @@ const handleToolCall = async ({ name, arguments: toolArgs })=>{
+                     element = await locateElement(page, elementNode);
+                 }
+                 try {
++                    if (element && process.env.MCP_BROWSER_SMOOTH_MOVE !== '0') {
++                        try {
++                            const __box = await element.boundingBox();
++                            if (__box) {
++                                const __cx = __box.x + __box.width / 2;
++                                const __cy = __box.y + __box.height / 2;
++                                const __steps = parseInt(process.env.MCP_BROWSER_MOVE_STEPS || '24', 10);
++                                await page.mouse.move(__cx, __cy, { steps: __steps });
++                            }
++                        } catch (__e) { /* best-effort */ }
++                    }
+                     await Promise.race([
+                         null == element ? void 0 : element.click(),
+                         new Promise((_, reject)=>setTimeout(()=>reject(new Error('Click timeout')), 5000))

@@ -48,7 +48,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "@agent-infra/browser@0.1.1": "patches/@agent-infra__browser@0.1.1.patch"
+      "@agent-infra/browser@0.1.1": "patches/@agent-infra__browser@0.1.1.patch",
+      "@agent-infra/mcp-server-browser@1.1.10": "patches/@agent-infra__mcp-server-browser@1.1.10.patch"
     }
   }
 }
