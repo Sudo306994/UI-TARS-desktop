@@ -8,9 +8,28 @@ import { BrowserControlMode } from '../../../types';
 import { ModelProviderName } from '@tarko/agent';
 
 /**
- * Supported providers for GUI-based browser control strategies
+ * Built-in providers known to ship with vision/grounding capability.
+ * Additional providers can be enabled by:
+ *   - setting env var TARKO_GUI_ALLOW_ALL=1 (allow any provider), or
+ *   - listing comma-separated names in TARKO_GUI_EXTRA_PROVIDERS, e.g.
+ *     TARKO_GUI_EXTRA_PROVIDERS=openai-compatible,openai
  */
 const GUI_SUPPORTED_PROVIDERS: ModelProviderName[] = ['volcengine'];
+
+function getEffectiveAllowList(): {
+  allowAll: boolean;
+  providers: Set<string>;
+} {
+  const allowAll = process.env.TARKO_GUI_ALLOW_ALL === '1';
+  const extra = (process.env.TARKO_GUI_EXTRA_PROVIDERS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return {
+    allowAll,
+    providers: new Set([...GUI_SUPPORTED_PROVIDERS, ...extra]),
+  };
+}
 
 /**
  * Validates the browser control mode based on model provider capabilities
@@ -34,24 +53,22 @@ export function validateBrowserControlMode(
     return requestedModeValue;
   }
 
-  // If provider is not specified or not in GUI supported list, enforce browser-use-only
-  if (!provider || !GUI_SUPPORTED_PROVIDERS.includes(provider as ModelProviderName)) {
-    // Get friendly provider name for logging
-    const providerName = provider ? provider : 'Unknown';
+  const { allowAll, providers } = getEffectiveAllowList();
+  const providerOk = !!provider && (allowAll || providers.has(String(provider)));
 
-    // Log the restriction and enforcement
+  if (!providerOk) {
+    const providerName = provider ? provider : 'Unknown';
     logger.warn(
       `Vision-based browser control (${requestedModeValue}) is not supported with ${providerName}`,
     );
     logger.info(
-      'Currently, vision-based browser control ("hyrid" / "visual-grounding") is only supported with Doubao 1.5 VL. ' +
+      'Vision-based browser control ("hybrid" / "visual-grounding") requires a vision-capable ' +
+        'provider. Built-in: Volcengine (Doubao 1.5 VL). Set TARKO_GUI_ALLOW_ALL=1 to bypass ' +
+        'this gate, or TARKO_GUI_EXTRA_PROVIDERS=name1,name2 to allow additional providers. ' +
         'Switching to "dom" mode.',
     );
-
-    // Force browser-use-only mode
     return 'dom';
   }
 
-  // Provider supports the requested mode, return it
   return requestedModeValue;
 }
