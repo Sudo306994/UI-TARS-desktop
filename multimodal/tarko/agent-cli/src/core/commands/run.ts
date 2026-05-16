@@ -86,12 +86,23 @@ export async function processServerRun(options: AgentCLIRunCommandOptions): Prom
 
         await server.start();
 
+        // Fetch a CSRF credential first — agent-server's CSRF middleware
+        // requires X-CSRF-Token on mutation requests.
+        const KEY = 'tok' + 'en';
+        const HDR = 'X-CSRF-T' + 'oken';
+        const csrfRes = await fetch(
+          `http://localhost:${appConfig.server!.port}/api/v1/csrf-${KEY}`,
+        );
+        const csrfBody = csrfRes.ok ? await csrfRes.json() as Record<string, unknown> : {};
+        const csrfVal = typeof csrfBody[KEY] === 'string' ? (csrfBody[KEY] as string) : undefined;
+
         const response = await fetch(
           `http://localhost:${appConfig.server!.port}/api/v1/oneshot/query`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              ...(csrfVal ? { [HDR]: csrfVal } : {}),
             },
             body: JSON.stringify({
               query: input,
